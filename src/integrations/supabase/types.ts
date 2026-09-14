@@ -14,16 +14,267 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      claims: {
+        Row: {
+          claimant_id: string
+          created_at: string
+          found_item_id: string
+          id: string
+          message: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["claim_status"]
+          updated_at: string
+        }
+        Insert: {
+          claimant_id: string
+          created_at?: string
+          found_item_id: string
+          id?: string
+          message: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+        }
+        Update: {
+          claimant_id?: string
+          created_at?: string
+          found_item_id?: string
+          id?: string
+          message?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claims_found_item_id_fkey"
+            columns: ["found_item_id"]
+            isOneToOne: false
+            referencedRelation: "found_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      found_items: {
+        Row: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at: string
+          date_found: string
+          description: string
+          id: string
+          image_path: string | null
+          item_name: string
+          kept_at: string
+          location: string
+          reporter_id: string
+          status: Database["public"]["Enums"]["item_status"]
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_found: string
+          description: string
+          id?: string
+          image_path?: string | null
+          item_name: string
+          kept_at: string
+          location: string
+          reporter_id: string
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_found?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          item_name?: string
+          kept_at?: string
+          location?: string
+          reporter_id?: string
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lost_items: {
+        Row: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at: string
+          date_lost: string
+          description: string
+          id: string
+          image_path: string | null
+          item_name: string
+          location: string
+          reporter_id: string
+          status: Database["public"]["Enums"]["item_status"]
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_lost: string
+          description: string
+          id?: string
+          image_path?: string | null
+          item_name: string
+          location: string
+          reporter_id: string
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_lost?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          item_name?: string
+          location?: string
+          reporter_id?: string
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      matches: {
+        Row: {
+          created_at: string
+          found_item_id: string
+          id: string
+          lost_item_id: string
+          match_reason: string
+          match_score: number
+        }
+        Insert: {
+          created_at?: string
+          found_item_id: string
+          id?: string
+          lost_item_id: string
+          match_reason: string
+          match_score?: number
+        }
+        Update: {
+          created_at?: string
+          found_item_id?: string
+          id?: string
+          lost_item_id?: string
+          match_reason?: string
+          match_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_found_item_id_fkey"
+            columns: ["found_item_id"]
+            isOneToOne: false
+            referencedRelation: "found_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_lost_item_id_fkey"
+            columns: ["lost_item_id"]
+            isOneToOne: false
+            referencedRelation: "lost_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_path: string | null
+          created_at: string
+          department: string
+          display_name: string
+          email: string | null
+          faculty: string
+          id: string
+          identifier: string
+          is_verified: boolean
+          updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          avatar_path?: string | null
+          created_at?: string
+          department: string
+          display_name: string
+          email?: string | null
+          faculty: string
+          id: string
+          identifier: string
+          is_verified?: boolean
+          updated_at?: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          avatar_path?: string | null
+          created_at?: string
+          department?: string
+          display_name?: string
+          email?: string | null
+          faculty?: string
+          id?: string
+          identifier?: string
+          is_verified?: boolean
+          updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
+      claim_status: "pending" | "approved" | "rejected"
+      item_category:
+        | "electronics"
+        | "documents"
+        | "wallets"
+        | "keys"
+        | "bags"
+        | "clothing"
+        | "books"
+        | "accessories"
+        | "other"
+      item_status: "open" | "matched" | "claimed" | "returned" | "closed"
+      user_type: "student" | "staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +401,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+      claim_status: ["pending", "approved", "rejected"],
+      item_category: [
+        "electronics",
+        "documents",
+        "wallets",
+        "keys",
+        "bags",
+        "clothing",
+        "books",
+        "accessories",
+        "other",
+      ],
+      item_status: ["open", "matched", "claimed", "returned", "closed"],
+      user_type: ["student", "staff"],
+    },
   },
 } as const
