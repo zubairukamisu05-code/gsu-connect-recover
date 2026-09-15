@@ -60,6 +60,7 @@ function HomePage() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [stats, setStats] = useState({ lost: 0, found: 0, matches: 0, notifications: 0 });
   const [view, setView] = useState<View>("home");
   const [mode, setMode] = useState<Mode>("lost");
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -93,12 +94,36 @@ function HomePage() {
   useEffect(() => {
     if (!session) return;
     const loadIdentity = async () => {
-      const [{ data: nextProfile }, { data: roleRows }] = await Promise.all([
+      const [{ data: nextProfile }, { data: roleRows }, lostCount, foundCount, matchRows, claimRows] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", session.user.id),
+        supabase.from("lost_items").select("id", { count: "exact", head: true }).eq("reporter_id", session.user.id),
+        supabase.from("found_items").select("id", { count: "exact", head: true }).eq("reporter_id", session.user.id),
+        supabase.from("matches").select("id").limit(100),
+        supabase.from("claims").select("id").eq("claimant_id", session.user.id).eq("status", "pending"),
       ]);
-      setProfile(nextProfile);
+      const userMetadata = (supabase.auth.getUser as unknown) ? null : null;
+      const recoveredProfile = nextProfile ?? {
+        id: session.user.id,
+        identifier: "",
+        user_type: "student" as const,
+        display_name: session.user.email?.split("@")[0] ?? "GSU member",
+        email: session.user.email ?? null,
+        department: "",
+        faculty: "",
+        avatar_path: null,
+        is_verified: false,
+        created_at: "",
+        updated_at: "",
+      };
+      setProfile(recoveredProfile);
       setIsAdmin(Boolean(roleRows?.some((row) => row.role === "admin")));
+      setStats({
+        lost: lostCount.count ?? 0,
+        found: foundCount.count ?? 0,
+        matches: matchRows.data?.length ?? 0,
+        notifications: claimRows.data?.length ?? 0,
+      });
     };
     void loadIdentity();
   }, [session, refreshKey]);
@@ -154,10 +179,10 @@ function HomePage() {
         {notice && <div className="mb-5 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary"><span>{notice}</span><Button variant="ghost" size="icon" className="size-7" onClick={() => setNotice("")} aria-label="Dismiss"><X className="size-4" /></Button></div>}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="My lost items" value="—" icon={<Search />} tone="blue" />
-          <StatCard label="My found items" value="—" icon={<Package />} tone="green" />
-          <StatCard label="Possible matches" value="—" icon={<TicketCheck />} tone="orange" />
-          <StatCard label="Notifications" value="—" icon={<Bell />} tone="purple" />
+          <StatCard label="My lost items" value={String(stats.lost)} icon={<Search />} tone="blue" />
+          <StatCard label="My found items" value={String(stats.found)} icon={<Package />} tone="green" />
+          <StatCard label="Possible matches" value={String(stats.matches)} icon={<TicketCheck />} tone="orange" />
+          <StatCard label="Notifications" value={String(stats.notifications)} icon={<Bell />} tone="purple" />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -211,12 +236,17 @@ function AuthScreen({ mode, onModeChange, onSuccess }: { mode: "login" | "signup
       if (signInError) setError(signInError.message.includes("Invalid") ? "Those sign-in details could not be verified." : signInError.message);
       else onSuccess();
     } else {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password: form.password, options: { data: { identifier: form.identifier.trim(), user_type: accountType, display_name: form.displayName.trim() }, emailRedirectTo: window.location.origin } });
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password: form.password, options: { data: { identifier: form.identifier.trim(), user_type: accountType, display_name: form.displayName.trim(), department: form.department, faculty: form.faculty }, emailRedirectTo: window.location.origin } });
       if (signUpError) setError(signUpError.message);
       else if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").insert({ id: data.user.id, identifier: form.identifier.trim(), user_type: accountType, display_name: form.displayName.trim(), email, department: form.department, faculty: form.faculty });
-        if (profileError) setError(profileError.message);
-        else { setError("Account created. Check your email to confirm your account, then sign in."); onModeChange("login"); }
+        if (data.session) {
+          const { error: profileError } = await supabase.from("profiles").upsert({ id: data.user.id, identifier: form.identifier.trim(), user_type: accountType, display_name: form.displayName.trim(), email, department: form.department, faculty: form.faculty });
+          if (profileError) setError(profileError.message);
+          else { setError("Account created. Check your email to confirm your account, then sign in."); onModeChange("login"); }
+        } else {
+          setError("Account created. Check your email to confirm your account, then sign in.");
+          onModeChange("login");
+        }
       }
     }
     setBusy(false);
