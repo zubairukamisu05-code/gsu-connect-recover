@@ -102,7 +102,6 @@ function HomePage() {
         supabase.from("matches").select("id").limit(100),
         supabase.from("claims").select("id").eq("claimant_id", session.user.id).eq("status", "pending"),
       ]);
-      const userMetadata = (supabase.auth.getUser as unknown) ? null : null;
       const recoveredProfile = nextProfile ?? {
         id: session.user.id,
         identifier: "",
@@ -116,7 +115,34 @@ function HomePage() {
         created_at: "",
         updated_at: "",
       };
-      setProfile(recoveredProfile);
+      if (!nextProfile) {
+        const { data: userData } = await supabase.auth.getUser();
+        const metadata = userData.user?.user_metadata as Record<string, string> | undefined;
+        const metadataProfile = {
+          ...recoveredProfile,
+          identifier: metadata?.identifier ?? recoveredProfile.identifier,
+          user_type: metadata?.user_type === "staff" ? "staff" as const : recoveredProfile.user_type,
+          display_name: metadata?.display_name ?? recoveredProfile.display_name,
+          department: metadata?.department ?? recoveredProfile.department,
+          faculty: metadata?.faculty ?? recoveredProfile.faculty,
+        };
+        if (metadataProfile.identifier && metadataProfile.department && metadataProfile.faculty) {
+          const { data: createdProfile } = await supabase.from("profiles").upsert({
+            id: metadataProfile.id,
+            identifier: metadataProfile.identifier,
+            user_type: metadataProfile.user_type,
+            display_name: metadataProfile.display_name,
+            email: metadataProfile.email,
+            department: metadataProfile.department,
+            faculty: metadataProfile.faculty,
+          }).select().maybeSingle();
+          setProfile(createdProfile ?? metadataProfile);
+        } else {
+          setProfile(metadataProfile);
+        }
+      } else {
+        setProfile(nextProfile);
+      }
       setIsAdmin(Boolean(roleRows?.some((row) => row.role === "admin")));
       setStats({
         lost: lostCount.count ?? 0,
