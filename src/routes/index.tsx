@@ -831,12 +831,12 @@ function ItemFeed({
   refreshKey,
   onClaim,
 }: {
-  userId?: string;
+  userId?: string | undefined;
   mode: Mode;
   search: string;
   category: string;
   refreshKey: number;
-  onClaim?: () => void;
+  onClaim?: (() => void) | undefined;
 }) {
   const [items, setItems] = useState<Array<LostItem | FoundItem>>([]);
   const [loading, setLoading] = useState(true);
@@ -897,8 +897,8 @@ function ItemCard({
   onClaim,
 }: {
   item: LostItem | FoundItem;
-  userId?: string;
-  onClaim?: () => void;
+  userId?: string | undefined;
+  onClaim?: (() => void) | undefined;
 }) {
   const isFound = "date_found" in item;
   const [claiming, setClaiming] = useState(false);
@@ -1053,7 +1053,11 @@ function AdminView({
     const { data: auth } = await supabase.auth.getUser();
     await supabase
       .from("claims")
-      .update({ status, reviewed_by: auth.user?.id, reviewed_at: new Date().toISOString() })
+      .update({
+        status,
+        reviewed_by: auth.user?.id ?? null,
+        reviewed_at: new Date().toISOString(),
+      })
       .eq("id", claim.id);
     if (status === "approved")
       await supabase
@@ -1139,11 +1143,11 @@ function ReportDialog({
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     itemName: "",
-    category: categories[0],
+    category: categories[0] ?? "electronics",
     description: "",
-    location: locations[0],
+    location: locations[0] ?? "GSU Library",
     date: new Date().toISOString().slice(0, 10),
-    keptAt: keptAt[0],
+    keptAt: keptAt[0] ?? "SUG Office",
     file: null as File | null,
   });
   const update = (key: keyof typeof form, value: string | File | null) =>
@@ -1345,7 +1349,7 @@ function ProfileCard({ profile }: { profile: Profile | null }) {
     </div>
   );
 }
-function MiniMatch({ item, label }: { item?: LostItem | FoundItem; label: string }) {
+function MiniMatch({ item, label }: { item?: (LostItem | FoundItem) | undefined; label: string }) {
   return (
     <div className="rounded-xl border border-border bg-background p-3">
       <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
