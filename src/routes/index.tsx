@@ -11,7 +11,6 @@ import {
   Library,
   LogOut,
   MapPin,
-  Menu,
   Package,
   Plus,
   Search,
@@ -96,7 +95,7 @@ const categories: Array<Database["public"]["Enums"]["item_category"]> = [
 ];
 
 function HomePage() {
-  const [session, setSession] = useState<{ user: { id: string; email?: string } } | null>(null);
+  const [session, setSession] = useState<{ user: { id: string; email: string } } | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -116,7 +115,7 @@ function HomePage() {
       if (mounted) {
         setSession(
           data.session
-            ? { user: { id: data.session.user.id, email: data.session.user.email } }
+            ? { user: { id: data.session.user.id, email: data.session.user.email ?? "" } }
             : null,
         );
         setLoadingSession(false);
@@ -124,7 +123,7 @@ function HomePage() {
     });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(
-        nextSession ? { user: { id: nextSession.user.id, email: nextSession.user.email } } : null,
+        nextSession ? { user: { id: nextSession.user.id, email: nextSession.user.email ?? "" } } : null,
       );
       if (!nextSession) {
         setProfile(null);
@@ -197,12 +196,12 @@ function HomePage() {
         const metadata = userData.user?.user_metadata as Record<string, string> | undefined;
         const metadataProfile = {
           ...recoveredProfile,
-          identifier: metadata?.identifier ?? recoveredProfile.identifier,
+          identifier: metadata?.["identifier"] ?? recoveredProfile.identifier,
           user_type:
-            metadata?.user_type === "staff" ? ("staff" as const) : recoveredProfile.user_type,
-          display_name: metadata?.display_name ?? recoveredProfile.display_name,
-          department: metadata?.department ?? recoveredProfile.department,
-          faculty: metadata?.faculty ?? recoveredProfile.faculty,
+            metadata?.["user_type"] === "staff" ? ("staff" as const) : recoveredProfile.user_type,
+          display_name: metadata?.["display_name"] ?? recoveredProfile.display_name,
+          department: metadata?.["department"] ?? recoveredProfile.department,
+          faculty: metadata?.["faculty"] ?? recoveredProfile.faculty,
         };
         if (metadataProfile.identifier && metadataProfile.department && metadataProfile.faculty) {
           const { data: createdProfile } = await supabase
@@ -522,8 +521,8 @@ function AuthScreen({
     email: "",
     password: "",
     displayName: "",
-    faculty: faculties[0],
-    department: departments[0],
+    faculty: faculties[0] ?? "Faculty of Science",
+    department: departments[0] ?? "Computer Science",
   });
   const update = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
