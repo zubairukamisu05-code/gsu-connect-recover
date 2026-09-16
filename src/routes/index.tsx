@@ -123,7 +123,9 @@ function HomePage() {
     });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(
-        nextSession ? { user: { id: nextSession.user.id, email: nextSession.user.email ?? "" } } : null,
+        nextSession
+          ? { user: { id: nextSession.user.id, email: nextSession.user.email ?? "" } }
+          : null,
       );
       if (!nextSession) {
         setProfile(null);
@@ -562,17 +564,15 @@ function AuthScreen({
       if (signUpError) setError(signUpError.message);
       else if (data.user) {
         if (data.session) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .upsert({
-              id: data.user.id,
-              identifier: form.identifier.trim(),
-              user_type: accountType,
-              display_name: form.displayName.trim(),
-              email,
-              department: form.department,
-              faculty: form.faculty,
-            });
+          const { error: profileError } = await supabase.from("profiles").upsert({
+            id: data.user.id,
+            identifier: form.identifier.trim(),
+            user_type: accountType,
+            display_name: form.displayName.trim(),
+            email,
+            department: form.department,
+            faculty: form.faculty,
+          });
           if (profileError) setError(profileError.message);
           else {
             setError("Account created. Check your email to confirm your account, then sign in.");
@@ -905,13 +905,11 @@ function ItemCard({
   const claim = async () => {
     if (!isFound || !userId) return;
     setClaiming(true);
-    const { error } = await supabase
-      .from("claims")
-      .insert({
-        claimant_id: userId,
-        found_item_id: item.id,
-        message: `I believe this ${item.item_name} belongs to me.`,
-      });
+    const { error } = await supabase.from("claims").insert({
+      claimant_id: userId,
+      found_item_id: item.id,
+      message: `I believe this ${item.item_name} belongs to me.`,
+    });
     setClaiming(false);
     if (!error) onClaim?.();
   };
