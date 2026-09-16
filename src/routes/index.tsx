@@ -94,14 +94,22 @@ function HomePage() {
   useEffect(() => {
     if (!session) return;
     const loadIdentity = async () => {
-      const [{ data: nextProfile }, { data: roleRows }, lostCount, foundCount, matchRows, claimRows] = await Promise.all([
+      const [{ data: nextProfile }, { data: roleRows }, lostCount, foundCount, userLostItems, userFoundItems, claimRows] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", session.user.id),
         supabase.from("lost_items").select("id", { count: "exact", head: true }).eq("reporter_id", session.user.id),
         supabase.from("found_items").select("id", { count: "exact", head: true }).eq("reporter_id", session.user.id),
-        supabase.from("matches").select("id").limit(100),
+        supabase.from("lost_items").select("id").eq("reporter_id", session.user.id),
+        supabase.from("found_items").select("id").eq("reporter_id", session.user.id),
         supabase.from("claims").select("id").eq("claimant_id", session.user.id).eq("status", "pending"),
       ]);
+      const lostIds = (userLostItems.data ?? []).map((item) => item.id);
+      const foundIds = (userFoundItems.data ?? []).map((item) => item.id);
+      let matchCount = 0;
+      if (lostIds.length || foundIds.length) {
+        const { data: matchRows } = await supabase.from("matches").select("lost_item_id, found_item_id").limit(100);
+        matchCount = (matchRows ?? []).filter((match) => lostIds.includes(match.lost_item_id) || foundIds.includes(match.found_item_id)).length;
+      }
       const recoveredProfile = nextProfile ?? {
         id: session.user.id,
         identifier: "",
@@ -147,7 +155,7 @@ function HomePage() {
       setStats({
         lost: lostCount.count ?? 0,
         found: foundCount.count ?? 0,
-        matches: matchRows.data?.length ?? 0,
+        matches: matchCount,
         notifications: claimRows.data?.length ?? 0,
       });
     };
@@ -213,9 +221,9 @@ function HomePage() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section className="min-w-0">
-            {view === "home" && <HomeFeed userId={session.user.id} mode={mode} onModeChange={setMode} onReport={() => setShowReport(true)} refreshKey={refreshKey} onClaim={() => setNotice("Claim request sent to the admin review queue.")} />}
+            {view === "home" && <HomeFeed userId={session.user.id} mode={mode} onModeChange={setMode} onReport={() => setShowReport(true)} refreshKey={refreshKey} onClaim={() => { setNotice("Claim request sent to the admin review queue."); setRefreshKey((key) => key + 1); }} />}
             {view === "items" && <ItemBrowse mode={mode} onModeChange={setMode} refreshKey={refreshKey} />}
-            {view === "matches" && <MatchesView userId={session.user.id} refreshKey={refreshKey} onClaim={() => setNotice("Claim request sent to the admin review queue.")} />}
+            {view === "matches" && <MatchesView userId={session.user.id} refreshKey={refreshKey} onClaim={() => { setNotice("Claim request sent to the admin review queue."); setRefreshKey((key) => key + 1); }} />}
             {view === "admin" && isAdmin && <AdminView refreshKey={refreshKey} onNotice={setNotice} />}
             {view === "admin" && !isAdmin && <EmptyState icon={<ShieldCheck />} title="Admin review" detail="Your account does not have the SUG or Security Admin role." />}
           </section>
