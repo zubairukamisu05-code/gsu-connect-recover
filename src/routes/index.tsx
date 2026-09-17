@@ -1167,30 +1167,31 @@ function ReportDialog({
         return;
       }
     }
-    const payload =
+    const saveError =
       mode === "lost"
-        ? {
-            reporter_id: userId,
-            item_name: form.itemName,
-            category: form.category,
-            description: form.description,
-            location: form.location,
-            date_lost: form.date,
-            image_path: imagePath,
-          }
-        : {
-            reporter_id: userId,
-            item_name: form.itemName,
-            category: form.category,
-            description: form.description,
-            location: form.location,
-            date_found: form.date,
-            kept_at: form.keptAt,
-            image_path: imagePath,
-          };
-    const { error: saveError } = await supabase
-      .from(mode === "lost" ? "lost_items" : "found_items")
-      .insert(payload);
+        ? (
+            await supabase.from("lost_items").insert({
+              reporter_id: userId,
+              item_name: form.itemName,
+              category: form.category,
+              description: form.description,
+              location: form.location,
+              date_lost: form.date,
+              image_path: imagePath,
+            })
+          ).error
+        : (
+            await supabase.from("found_items").insert({
+              reporter_id: userId,
+              item_name: form.itemName,
+              category: form.category,
+              description: form.description,
+              location: form.location,
+              date_found: form.date,
+              kept_at: form.keptAt,
+              image_path: imagePath,
+            })
+          ).error;
     if (saveError) setError(saveError.message);
     else onSaved();
     setBusy(false);
